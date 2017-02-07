@@ -1,0 +1,16 @@
+{
+  "name": "TWEETMAP",
+  "version": "1.0.0",
+  "description": "Mapping tweets on D3 JS world map",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.13.3",
+    "dotenv": "^2.0.0",
+    "express": "^4.13.3",
+    "socket.io": "^1.5.0"
+  }
+}
