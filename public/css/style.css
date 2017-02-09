@@ -4,3 +4,38 @@ body {
   font-family: 'Work Sans', sans-serif;
   background-image: url("https://subtlepatterns.com/patterns/sos.png");
 }
+
+.tooltip {
+  
+  position: absolute;
+  text-align: center;
+  vertical-align: middle;
+  width: 160px;
+  height: 70px;
+  padding: 10px;
+  font: 14px Work Sans;
+  background:#2c3e50;
+  border: 0px;
+  border-radius: 8px;
+  color:white;
+  
+}
+
+.emoticonTip {
+  
+  position: absolute;
+  text-align: center;
+  vertical-align: middle;
+  width: 160px;
+  height: 40px;
+  padding: 10px;
+  font: 14px Work Sans;
+  background:#2c3e50;
+  border: 0px;
+  border-radius: 8px;
+  color:white;
+  
+  
+}
+
+

@@ -14,14 +14,35 @@ var svg = d3.select("#chart")
               .attr("width", w + margin.left + margin.right)
               .attr("height", h + margin.top + margin.bottom)
             .append("g")
-              .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
+              .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+              .attr("id", "area");
+              
 var geoData = "https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json";
 
 d3.json(geoData, function(data){
     
     //raw data for drawing global map
     var geo = data.features;
+    
+    //remove antartica from map
+    /*var antartica = geo.map(function(item){
+        
+        return item.id;
+        
+    }).indexOf("ATA");
+    
+    geo.splice(antartica, 1);*/
+    
+    for(var i = 0; i < geo.length; i++){
+        
+        switch(geo[i].properties.name){
+            
+            case "United States of America":
+                geo[i].properties.name = "united states";
+        }
+        
+        
+    }
     
     //parsed data for text mining and manipulating the map
     var geoParsed = [];
@@ -32,18 +53,61 @@ d3.json(geoData, function(data){
             
             id: item.properties.name.toLowerCase(),
             
-            count: 0
+            code: item.id,
+            
+            happy: 0,
             //happyness index starting at 0
             
+            unhappy: 0
         };
         
         geoParsed.push(country);
         
     });
     
+    
     console.log(geoParsed);
     
+    //the max happiness counter can reach
+    //for use in d3 scales
+    //so counter starts at 0 for each country. 
+    //When found happy keyword +1, if unhappy keyword -1. Can go max up to 20
+    var maxCount = 20;
     
+    /*var color = d3.scale.linear()
+            .domain([0,maxCount])
+            .range(["#d35400","#f39c12"]);
+            //going from dark color to bright orange*/
+            
+    var colorCodes = ["#f39c12", "#2c3e50", "#16a085", "#7F8C8D"]; 
+    var colorLabels = ["Happy", "UnHappy", "Equal", "No Data"];
+            
+    var color = function(element){
+        
+        if (element.happy > element.unhappy){
+            
+             return colorCodes[0];            
+            
+        } else if (element.happy < element.unhappy){
+            
+             return colorCodes[1];
+            
+        } else if (element.happy === element.unhappy){
+            
+            return colorCodes[2];
+            
+        }
+        
+    };     
+    
+    var tip = d3.select("#chart").append("div")
+                                 .attr("class","tooltip")
+                                 .attr("opacity", 0);
+                                 
+    /*var emoticonTip = d3.select("#chart").append("div")
+                                         .attr("class", "emoticonTip")
+                                         .attr("opacity", 0);*/
+
     var projection = d3.geo.mercator()
                        .scale(150)
                        .translate([w/2,h/2]);
@@ -55,15 +119,72 @@ d3.json(geoData, function(data){
        .data(geo)
        .enter()
        .append("path")
-       .attr("fill", "#95E1D3")
+       .attr("fill", "#7f8c8d")
        .attr("stroke", "#34495e")
        .attr("stroke-width", 0.5)
        .attr("class", function(d){ return d.properties.name.toLowerCase()})
        //.attr("class", function(d){ return d.id})
-       .attr("d", path);
+       .attr("d", path)
+       .on("mouseover", function(d){
+           
+           tip.transition()
+              .style("opacity", 0.7);
+           tip.html("<strong>" + d.properties.name + "</strong>")
+              .style("left", d3.event.pageX + "px")
+              .style("top", d3.event.pageY - 70 + "px");
+           
+       })
+       .on("mouseout", function(d){
+           
+           tip.transition()
+              .style("opacity", 0);
+           
+       });
+       
+    /*Legend*/
+    
+    var blockWidth = 90;
+    var blockHeight = 15;
+    var blockMargin = 10;
+    
+    var legend = svg.selectAll(".legend")
+    //each block = circle + text in a g element and shifted to the right using the blockwidth
+                   .data(colorCodes)
+                   .enter()
+                   .append("g")
+                   .attr("class", "legend")
+                   .attr("font-size", "13px")
+                   .attr("font-style", "Work Sans")
+                   .attr("transform", function(d,i){
+                       
+                       return ("translate(" + i * blockWidth + ",0)");
+                       
+                   });
+       
+    //append a circle to each g element   
+    legend.append("rect")
+          .attr("x", w - 340 )
+          .attr("y", 0)
+          .attr("width", blockWidth)
+          .attr("height", blockHeight)
+          .style("fill", function(d,i){
+              
+              return(colorCodes[i]);
+              
+          });
+          
+    legend.append("text")
+          .attr("x", (w - 340) + (blockWidth/2))
+          .attr("y", blockHeight + 15)
+          .text(function(d,i){
+              
+              return colorLabels[i];
+              
+          })
+          .style("text-anchor", "middle");
        
     /*PubNub*/
-
+    
     var happy = [
 		'happy', 'lucky', 'awesome', 'excited', 'fun', 'amusing', 'amused', 'pleasant', 'pleasing', 'glad', 'enjoy',
 		'jolly', 'delightful', 'joyful', 'joyous', ':-)', ':)', ':-D', ':D', '=)','☺'
@@ -78,11 +199,13 @@ d3.json(geoData, function(data){
         
         if(message.message.place !== null){
         //country is a sub property of message.place. Place is null when it's not provided
+        //if no place is provided(null), no need to do things below
         
         //local variables in if statement
         var country = message.message.place.country.toLowerCase();
         var country_code = message.message.place.country_code;
         var text = message.message.text.toLowerCase();
+        var position = [];
    
              //check if message.message.text contains a keyword in happy or in unhappy
              
@@ -105,8 +228,91 @@ d3.json(geoData, function(data){
             
             if(isHappy === true){
                 
-                //console.log("we found a happy user!");
-                //console.log(message.message.text);
+                if(message.message.geo){
+                //if geo object exists        
+                    
+                    position = message.message.geo.coordinates;
+                    
+                    var emoticonPosition = projection([position[1],position[0]]);
+                       
+                    svg.append("svg:image")
+                       .attr("x", emoticonPosition[0])
+                       .attr("y", emoticonPosition[1])
+                       .attr("xlink:href", "https://res.cloudinary.com/dettjqo9j/image/upload/c_scale,h_16,w_16/v1486610569/smiling-face_tqhkre.png")
+                       .attr("width", 16)
+                       .attr("height", 16);
+                    }
+                    
+                
+                var elementPos = geoParsed.map(function(x){
+                //find the country position in the geoParsed array    
+                    
+                    return x.id;
+                    
+                    
+                }).indexOf(country);
+                
+                //geoParsed is an array of country names from geojson data
+                //compare with country names from Twitter data
+                
+                console.log(country);
+                console.log(country_code);
+                //console.log(elementPos);
+                
+                console.log(geoParsed[elementPos]);
+                
+                if(typeof geoParsed[elementPos] !== "undefined"){
+                //error handling: only when elementPos is not -1 (not found), making geoParsed[elementPos] is undefined
+                    
+                    if(geoParsed[elementPos].happy < maxCount){
+                    //add to happiness count only when has not reached twenty yet    
+                        
+                        geoParsed[elementPos].happy += 1;
+                        
+                    }
+                    
+                    d3.select("." + country )
+                      .attr("fill", function(){console.log("we found a country"); return color(geoParsed[elementPos])});
+                    
+                }    
+                
+            } else if (isUnhappy === true){
+    
+                
+                 if(message.message.geo){
+                //if geo object exists        
+                    
+                    position = message.message.geo.coordinates;
+                    
+                    
+                    var emoticonPosition = projection([position[1],position[0]]);
+    
+                       
+                    svg.append("svg:image")
+                       .attr("x", emoticonPosition[0])
+                       .attr("y", emoticonPosition[1])
+                       .attr("xlink:href", "https://res.cloudinary.com/dettjqo9j/image/upload/c_scale,w_16/v1486610562/pensive-face_mqp5ca.png")
+                       .attr("width", 16)
+                       .attr("height", 16)
+                       /*.on("mouseover", function(d){
+                           
+                           console.log(d);
+                           
+                           emoticonTip.transition()
+                                      .style("opacity", 0.7);
+                           emoticonTip.html(d.user.screen_name + ": " + d.message.text)
+                                      .style("left", d3.event.pageX + "px")
+                                      .style("top", d3.event.pageY - 40 + "px");
+                           
+                       })
+                       .on("mouseout", function(d){
+                           
+                           emoticonTip.transition()
+                                      .style("opacity", 0);
+                           
+                       });*/   
+                    
+                }
                 
                 var elementPos = geoParsed.map(function(x){
                 //find the country position in the geoParsed array    
@@ -114,28 +320,22 @@ d3.json(geoData, function(data){
                     return x.id;
                     
                 }).indexOf(country);
-
-                console.log(elementPos);
                 
                 if(typeof geoParsed[elementPos] !== "undefined"){
                 //error handling: only when elementPos is not -1 (not found), making geoParsed[elementPos] is undefined
                     
-                    //console.log(geoParsed[elementPos].count);
-                    
-                    geoParsed[elementPos].count += 1;
-                    
-                    //console.log(geoParsed[elementPos].count);
+                    if(geoParsed[elementPos].unhappy < maxCount){
+                    //add to happiness count only when has not reached twenty yet    
+                        
+                        geoParsed[elementPos].unhappy += 1;
+                        
+                    }
                     
                     d3.select("." + country )
-                      .attr("fill", "#c0392b");
+                      .attr("fill", function(){return color(geoParsed[elementPos])});
                     
                 }    
                 
-            } else if (isUnhappy === true){
-                
-                
-                //console.log("we found a unhappy user!");
-                //console.log(message.message.text);
                 
             }
                 
@@ -162,11 +362,8 @@ d3.json(geoData, function(data){
     console.log("Subscribing to Live Twitter Stream.");
     pubnub.subscribe({ channels: ['pubnub-twitter'] });
     
-
     // Add Socket Event Function Handlers
     pubnub.addListener({
-    //status  : statusEvent => console.log(statusEvent),
-    //message : message     => console.log(message.message.text, message.message.place.country)
     
     message: function(message){
         
