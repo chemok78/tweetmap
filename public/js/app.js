@@ -17,7 +17,9 @@ var svg = d3.select("#chart")
               .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
               .attr("id", "area");
               
-var geoData = "https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json";
+//var geoData = "https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json";
+
+var geoData = "https://res.cloudinary.com/dettjqo9j/raw/upload/v1486657302/countries_njy53j.json";
 
 d3.json(geoData, function(data){
     
@@ -33,7 +35,7 @@ d3.json(geoData, function(data){
     
     geo.splice(antartica, 1);*/
     
-    for(var i = 0; i < geo.length; i++){
+    /*for(var i = 0; i < geo.length; i++){
         
         switch(geo[i].properties.name){
             
@@ -42,7 +44,7 @@ d3.json(geoData, function(data){
         }
         
         
-    }
+    }*/
     
     //parsed data for text mining and manipulating the map
     var geoParsed = [];
@@ -51,7 +53,7 @@ d3.json(geoData, function(data){
         
         var country = {
             
-            id: item.properties.name.toLowerCase(),
+            id: item.properties.name,
             
             code: item.id,
             
@@ -122,8 +124,8 @@ d3.json(geoData, function(data){
        .attr("fill", "#7f8c8d")
        .attr("stroke", "#34495e")
        .attr("stroke-width", 0.5)
-       .attr("class", function(d){ return d.properties.name.toLowerCase()})
-       //.attr("class", function(d){ return d.id})
+       //.attr("class", function(d){ return d.properties.name.toLowerCase()})
+       .attr("class", function(d){ return d.id})
        .attr("d", path)
        .on("mouseover", function(d){
            
@@ -202,7 +204,7 @@ d3.json(geoData, function(data){
         //if no place is provided(null), no need to do things below
         
         //local variables in if statement
-        var country = message.message.place.country.toLowerCase();
+        var country = message.message.place.country;
         var country_code = message.message.place.country_code;
         var text = message.message.text.toLowerCase();
         var position = [];
@@ -228,6 +230,8 @@ d3.json(geoData, function(data){
             
             if(isHappy === true){
                 
+                console.log(message.message);
+                
                 if(message.message.geo){
                 //if geo object exists        
                     
@@ -247,19 +251,18 @@ d3.json(geoData, function(data){
                 var elementPos = geoParsed.map(function(x){
                 //find the country position in the geoParsed array    
                     
-                    return x.id;
+                    return x.code;
                     
                     
-                }).indexOf(country);
+                }).indexOf(country_code);
                 
                 //geoParsed is an array of country names from geojson data
                 //compare with country names from Twitter data
                 
                 console.log(country);
                 console.log(country_code);
-                //console.log(elementPos);
-                
                 console.log(geoParsed[elementPos]);
+                
                 
                 if(typeof geoParsed[elementPos] !== "undefined"){
                 //error handling: only when elementPos is not -1 (not found), making geoParsed[elementPos] is undefined
@@ -271,10 +274,11 @@ d3.json(geoData, function(data){
                         
                     }
                     
-                    d3.select("." + country )
-                      .attr("fill", function(){console.log("we found a country"); return color(geoParsed[elementPos])});
+                    d3.select("." + country_code )
+                      .attr("fill", function(){ return color(geoParsed[elementPos])});
                     
-                }    
+                }
+                
                 
             } else if (isUnhappy === true){
     
@@ -317,9 +321,9 @@ d3.json(geoData, function(data){
                 var elementPos = geoParsed.map(function(x){
                 //find the country position in the geoParsed array    
                     
-                    return x.id;
+                    return x.code;
                     
-                }).indexOf(country);
+                }).indexOf(country_code);
                 
                 if(typeof geoParsed[elementPos] !== "undefined"){
                 //error handling: only when elementPos is not -1 (not found), making geoParsed[elementPos] is undefined
@@ -331,14 +335,13 @@ d3.json(geoData, function(data){
                         
                     }
                     
-                    d3.select("." + country )
+                    d3.select("." + country_code )
                       .attr("fill", function(){return color(geoParsed[elementPos])});
                     
                 }    
                 
                 
             }
-                
             
             
         } else {
