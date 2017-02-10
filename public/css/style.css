@@ -6,7 +6,6 @@ body {
 }
 
 .tooltip {
-  
   position: absolute;
   text-align: center;
   vertical-align: middle;
@@ -14,15 +13,13 @@ body {
   height: 70px;
   padding: 10px;
   font: 14px Work Sans;
-  background:#2c3e50;
+  background: #2c3e50;
   border: 0px;
   border-radius: 8px;
-  color:white;
-  
+  color: white;
 }
 
 .emoticonTip {
-  
   position: absolute;
   text-align: center;
   vertical-align: middle;
@@ -30,13 +27,13 @@ body {
   height: 120px;
   padding: 10px;
   font: 14px Work Sans;
-  background:#2c3e50;
+  background: #2c3e50;
   border: 0px;
   border-radius: 8px;
-  color:white;
+  color: white;
   opacity: 0;
-  
 }
+
 
 /*#chart {
   
@@ -44,55 +41,46 @@ body {
   
 }*/
 
-
 #tweetbox {
-  
-  display:inline-block;
+  display: inline-block;
   position: absolute;
   color: #2c3e50;
-  padding-top:20px;
+  padding-top: 20px;
   padding-bottom: 20px;
   padding-left: 30px;
-  
 }
 
 .profileimage {
-  
-  float:left;
-  
+  float: left;
 }
 
 .name {
-  
-  float:left;
+  float: left;
   padding-left: 5px;
 }
 
 .screenname {
-  
-  float:left;
+  float: left;
   padding-left: 5px;
 }
 
 .textRaw {
-  
-  float:left;
-  text-align:left;
+  float: left;
+  text-align: left;
   padding-top: 10px;
   padding-right: 5px;
-  font-weight:bold;
+  font-weight: bold;
 }
 
-.time, .place {
-  
-  float:left;
-  text-align:left;
+.time,
+.place {
+  float: left;
+  text-align: left;
   padding-right: 5px;
-  font-size:12px;
+  font-size: 12px;
 }
 
 .boxemoticon {
-  clear:left;
+  clear: left;
   float: left;
-  
 }
