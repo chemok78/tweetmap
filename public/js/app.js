@@ -16,10 +16,22 @@ var svg = d3.select("#chart")
             .append("g")
               .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
               .attr("id", "area");
-              
-//var geoData = "https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json";
 
 var geoData = "https://res.cloudinary.com/dettjqo9j/raw/upload/v1486657302/countries_njy53j.json";
+
+var boxPosition = document.getElementById("area").getBoundingClientRect();
+
+var boxHeight = 330;
+
+d3.select("#chart").append("div")
+                   .attr("id", "tweetbox")
+                   .style("background-color", "#bdc3c7")
+                   .style("opacity", 1)
+                   .style("border-radius", "25px")
+                   .style("left", boxPosition.left - margin.right + "px")
+                   .style("top", boxPosition.top + (h - boxHeight)  + "px")
+                   .style("width", "300px")
+                   .style("height", boxHeight +"px");
 
 d3.json(geoData, function(data){
     
@@ -27,24 +39,13 @@ d3.json(geoData, function(data){
     var geo = data.features;
     
     //remove antartica from map
-    /*var antartica = geo.map(function(item){
+    var antartica = geo.map(function(item){
         
         return item.id;
         
-    }).indexOf("ATA");
+    }).indexOf("AQ");
     
-    geo.splice(antartica, 1);*/
-    
-    /*for(var i = 0; i < geo.length; i++){
-        
-        switch(geo[i].properties.name){
-            
-            case "United States of America":
-                geo[i].properties.name = "united states";
-        }
-        
-        
-    }*/
+    geo.splice(antartica, 1);
     
     //parsed data for text mining and manipulating the map
     var geoParsed = [];
@@ -67,19 +68,11 @@ d3.json(geoData, function(data){
         
     });
     
-    
-    console.log(geoParsed);
-    
     //the max happiness counter can reach
     //for use in d3 scales
     //so counter starts at 0 for each country. 
     //When found happy keyword +1, if unhappy keyword -1. Can go max up to 20
-    var maxCount = 20;
-    
-    /*var color = d3.scale.linear()
-            .domain([0,maxCount])
-            .range(["#d35400","#f39c12"]);
-            //going from dark color to bright orange*/
+    var maxCount = 100;
             
     var colorCodes = ["#f39c12", "#2c3e50", "#16a085", "#7F8C8D"]; 
     var colorLabels = ["Happy", "UnHappy", "Equal", "No Data"];
@@ -106,13 +99,13 @@ d3.json(geoData, function(data){
                                  .attr("class","tooltip")
                                  .attr("opacity", 0);
                                  
-    /*var emoticonTip = d3.select("#chart").append("div")
+    var emoticonTip = d3.select("#chart").append("div")
                                          .attr("class", "emoticonTip")
-                                         .attr("opacity", 0);*/
+                                         .attr("opacity", 0);
 
     var projection = d3.geo.mercator()
-                       .scale(150)
-                       .translate([w/2,h/2]);
+                       .scale(160)
+                       .translate([w/2,h/1.7]);
     
     var path = d3.geo.path()
                      .projection(projection);
@@ -124,7 +117,6 @@ d3.json(geoData, function(data){
        .attr("fill", "#7f8c8d")
        .attr("stroke", "#34495e")
        .attr("stroke-width", 0.5)
-       //.attr("class", function(d){ return d.properties.name.toLowerCase()})
        .attr("class", function(d){ return d.id})
        .attr("d", path)
        .on("mouseover", function(d){
@@ -184,6 +176,15 @@ d3.json(geoData, function(data){
               
           })
           .style("text-anchor", "middle");
+          
+    var createDate = function(){
+        
+        
+        var d = new Date();        
+        
+		return d;   
+        
+    };      
        
     /*PubNub*/
     
@@ -202,13 +203,23 @@ d3.json(geoData, function(data){
         if(message.message.place !== null){
         //country is a sub property of message.place. Place is null when it's not provided
         //if no place is provided(null), no need to do things below
+       
+       var data= {
+           
+           country: message.message.place.country,
+           country_code: message.message.place.country_code,
+           text: message.message.text.toLowerCase(),
+           position: [],
+           textRaw: message.message.text,
+           place: message.message.place.full_name,
+           timestamp: message.message.timestamp_ms,
+           name: message.message.user.name,
+           screenname: message.message.user.screen_name,
+           profileImage: message.message.user.profile_image_url_https,
+           url: message.message.user.url,
+           
+       };
         
-        //local variables in if statement
-        var country = message.message.place.country;
-        var country_code = message.message.place.country_code;
-        var text = message.message.text.toLowerCase();
-        var position = [];
-   
              //check if message.message.text contains a keyword in happy or in unhappy
              
              var isHappy = happy.some(function(item){
@@ -216,7 +227,7 @@ d3.json(geoData, function(data){
             //some returns true if one item returns true and stops
             //if not it returns false
 
-		        return(text.indexOf(item) !== -1)
+		        return(data.text.indexOf(item) !== -1);
                 //if item is not found in iteration, returns false
                 //if item is found in iteration, it returns true and stops
 
@@ -224,27 +235,44 @@ d3.json(geoData, function(data){
             
             var isUnhappy = unhappy.some(function(item){
                 
-                return (text.indexOf(item) !== -1);
+                return (data.text.indexOf(item) !== -1);
                 
             });
             
             if(isHappy === true){
                 
-                console.log(message.message);
-                
                 if(message.message.geo){
                 //if geo object exists        
                     
-                    position = message.message.geo.coordinates;
+                    data.position = message.message.geo.coordinates;
                     
-                    var emoticonPosition = projection([position[1],position[0]]);
+                    var emoticonPosition = projection([data.position[1],data.position[0]]);
                        
                     svg.append("svg:image")
                        .attr("x", emoticonPosition[0])
                        .attr("y", emoticonPosition[1])
                        .attr("xlink:href", "https://res.cloudinary.com/dettjqo9j/image/upload/c_scale,h_16,w_16/v1486610569/smiling-face_tqhkre.png")
                        .attr("width", 16)
-                       .attr("height", 16);
+                       .attr("height", 16)
+                       .on("mouseover", function(){
+            
+                           
+                           emoticonTip.transition()
+                                      .duration(200)
+                                      .style("opacity", 0.7);
+                           emoticonTip.html(data.screenname + ": " + data.textRaw)
+                                      .style("left", d3.event.pageX + "px")
+                                      .style("top", d3.event.pageY - 40 + "px");
+                           
+                       })
+                       .on("mouseout", function(d){
+                           
+                           emoticonTip.transition()
+                                      .duration(200)
+                                      .style("opacity", 0);
+                           
+                       });   
+                       
                     }
                     
                 
@@ -254,15 +282,11 @@ d3.json(geoData, function(data){
                     return x.code;
                     
                     
-                }).indexOf(country_code);
+                }).indexOf(data.country_code);
                 
                 //geoParsed is an array of country names from geojson data
                 //compare with country names from Twitter data
-                
-                console.log(country);
-                console.log(country_code);
-                console.log(geoParsed[elementPos]);
-                
+     
                 
                 if(typeof geoParsed[elementPos] !== "undefined"){
                 //error handling: only when elementPos is not -1 (not found), making geoParsed[elementPos] is undefined
@@ -274,8 +298,11 @@ d3.json(geoData, function(data){
                         
                     }
                     
-                    d3.select("." + country_code )
+                    d3.select("." + data.country_code )
                       .attr("fill", function(){ return color(geoParsed[elementPos])});
+                      
+                    document.getElementById("tweetbox").innerHTML = "<img " + "src='" + data.profileImage + "' class='img-rounded profileimage'>" + "<strong class='name'>" + data.name + "</strong><br><p class='screenname'>@" + data.screenname + "</p><br><p class='textRaw'>" + data.textRaw + "</p><br><p class='time'>" + createDate() + "</p><br><p class='place'>" + data.country + " | " + data.place + "</p><br>" + "<img src='https://res.cloudinary.com/dettjqo9j/image/upload/c_scale,w_48/v1486610569/smiling-face_tqhkre.png' class='boxemoticon'>";   
+                    
                     
                 }
                 
@@ -286,10 +313,10 @@ d3.json(geoData, function(data){
                  if(message.message.geo){
                 //if geo object exists        
                     
-                    position = message.message.geo.coordinates;
+                    data.position = message.message.geo.coordinates;
                     
                     
-                    var emoticonPosition = projection([position[1],position[0]]);
+                    var emoticonPosition = projection([data.position[1],data.position[0]]);
     
                        
                     svg.append("svg:image")
@@ -298,13 +325,13 @@ d3.json(geoData, function(data){
                        .attr("xlink:href", "https://res.cloudinary.com/dettjqo9j/image/upload/c_scale,w_16/v1486610562/pensive-face_mqp5ca.png")
                        .attr("width", 16)
                        .attr("height", 16)
-                       /*.on("mouseover", function(d){
-                           
-                           console.log(d);
+                       .on("mouseover", function(){
+            
                            
                            emoticonTip.transition()
+                                      .duration(200)
                                       .style("opacity", 0.7);
-                           emoticonTip.html(d.user.screen_name + ": " + d.message.text)
+                           emoticonTip.html(data.screenname + ": " + data.textRaw)
                                       .style("left", d3.event.pageX + "px")
                                       .style("top", d3.event.pageY - 40 + "px");
                            
@@ -312,9 +339,10 @@ d3.json(geoData, function(data){
                        .on("mouseout", function(d){
                            
                            emoticonTip.transition()
+                                      .duration(200)
                                       .style("opacity", 0);
                            
-                       });*/   
+                       });   
                     
                 }
                 
@@ -323,7 +351,7 @@ d3.json(geoData, function(data){
                     
                     return x.code;
                     
-                }).indexOf(country_code);
+                }).indexOf(data.country_code);
                 
                 if(typeof geoParsed[elementPos] !== "undefined"){
                 //error handling: only when elementPos is not -1 (not found), making geoParsed[elementPos] is undefined
@@ -335,8 +363,10 @@ d3.json(geoData, function(data){
                         
                     }
                     
-                    d3.select("." + country_code )
+                    d3.select("." + data.country_code )
                       .attr("fill", function(){return color(geoParsed[elementPos])});
+                      
+                    document.getElementById("tweetbox").innerHTML = "<img " + "src='" + data.profileImage + "' class='img-rounded profileimage'>" + "<strong class='name'>" + data.name + "</strong><br><p class='screenname'>@" + data.screenname + "</p><br><p class='textRaw'>" + data.textRaw + "</p><br><p class='time'>" + createDate() + "</p><br><p class='place'>" + data.country + " | " + data.place + "</p><br>" + "<img src='https://res.cloudinary.com/dettjqo9j/image/upload/c_scale,w_48/v1486610562/pensive-face_mqp5ca.png' class='boxemoticon'>";     
                     
                 }    
                 
